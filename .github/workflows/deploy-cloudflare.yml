@@ -43,7 +43,7 @@ jobs:
         env:
           CLOUDFLARE_D1_DATABASE_ID: ${{ vars.CLOUDFLARE_D1_DATABASE_ID }}
         run: |
-          node -e "const fs = require('fs'); const id = process.env.CLOUDFLARE_D1_DATABASE_ID || ''; if (!/^[0-9a-f]{32}$/i.test(id)) throw new Error('Set the CLOUDFLARE_D1_DATABASE_ID repository variable to the D1 database ID'); const path = 'wrangler.jsonc'; const config = fs.readFileSync(path, 'utf8'); fs.writeFileSync(path, config.replace('__CLOUDFLARE_D1_DATABASE_ID__', id));"
+          node -e "const fs = require('fs'); const id = process.env.CLOUDFLARE_D1_DATABASE_ID || ''; if (!/^(?:[0-9a-f]{32}|[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12})$/i.test(id)) throw new Error('Set the CLOUDFLARE_D1_DATABASE_ID repository variable to the D1 database ID'); const path = 'wrangler.jsonc'; const config = fs.readFileSync(path, 'utf8'); fs.writeFileSync(path, config.replace('__CLOUDFLARE_D1_DATABASE_ID__', id));"
 
       - name: Apply D1 migrations
         uses: cloudflare/wrangler-action@v3
