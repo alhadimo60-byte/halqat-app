@@ -1,5 +1,6 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="com.example.halqat_app">
+    <uses-permission android:name="android.permission.INTERNET" />
    <application
         android:label="حلقات القربات"
         android:name="${applicationName}"
