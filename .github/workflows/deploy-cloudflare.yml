@@ -50,6 +50,7 @@ jobs:
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: f77541dac46d47974971d8547fea733d
+          wranglerVersion: '4'
           command: d1 migrations apply halqat-app-db --remote
 
       - name: Deploy to Cloudflare Workers
@@ -57,4 +58,5 @@ jobs:
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: f77541dac46d47974971d8547fea733d
+          wranglerVersion: '4'
           command: deploy
