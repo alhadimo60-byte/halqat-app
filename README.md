@@ -13,6 +13,8 @@
 
 بعد أول نشر، أضف في **Worker → Settings → Variables and Secrets** سرّي Worker `INITIAL_ADMIN_USERNAME` و`INITIAL_ADMIN_PASSWORD` (كلمة المرور 12 خانة على الأقل). يُنشأ المدير عند أول محاولة دخول، ولا توجد حسابات تجريبية أو تسجيل عام في النسخة السحابية.
 
+ينتج سير العمل أيضًا ملف Android APK متصلًا بواجهة Workers. نزّله من **Actions → آخر تشغيل ناجح → Artifacts → halqat-app-android-apk**. نسخة APK موقعة بمفتاح debug لتسهيل التثبيت والاختبار، وليست مفتاح نشر متجر Google Play.
+
 ## البناء والتشغيل محليًا
 
 ```sh

@@ -183,10 +183,13 @@ async function recordLoginFailure(db, ipAddress) {
 
 async function requireUser(request, db) {
   const cookie = request.headers.get('Cookie') ?? '';
+  const authorization = request.headers.get('Authorization') ?? '';
+  const bearer = /^Bearer\s+(.+)$/i.exec(authorization);
   const match = /(?:^|;\s*)halqat_session=([^;]+)/.exec(cookie);
-  if (!match) return null;
+  const token = bearer?.[1] ?? (match ? decodeURIComponent(match[1]) : null);
+  if (!token) return null;
 
-  const tokenHash = await sha256(decodeURIComponent(match[1]));
+  const tokenHash = await sha256(token);
   const row = await db.prepare(
     `SELECT users.*
        FROM sessions
@@ -345,8 +348,12 @@ async function handleApi(request, env) {
       .bind(ipAddress)
       .run();
     const token = await createSession(db, row.id);
+    const responseBody = { user: publicUser(row) };
+    if (request.headers.get('X-App-Platform') === 'native') {
+      responseBody.token = token;
+    }
     return jsonResponse(
-      { user: publicUser(row) },
+      responseBody,
       200,
       {
         'Set-Cookie': `halqat_session=${encodeURIComponent(token)}; HttpOnly; Secure; SameSite=Strict; Path=/; Max-Age=${sessionLifetimeSeconds}`,
@@ -357,9 +364,12 @@ async function handleApi(request, env) {
   if (path === '/api/auth/logout' && method === 'POST') {
     const cookie = request.headers.get('Cookie') ?? '';
     const match = /(?:^|;\s*)halqat_session=([^;]+)/.exec(cookie);
-    if (match) {
+    const authorization = request.headers.get('Authorization') ?? '';
+    const bearer = /^Bearer\s+(.+)$/i.exec(authorization);
+    const token = bearer?.[1] ?? (match ? decodeURIComponent(match[1]) : null);
+    if (token) {
       await db.prepare('DELETE FROM sessions WHERE token_hash = ?')
-        .bind(await sha256(decodeURIComponent(match[1])))
+        .bind(await sha256(token))
         .run();
     }
     return jsonResponse(

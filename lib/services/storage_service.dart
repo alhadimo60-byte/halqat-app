@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -25,16 +26,18 @@ class StorageService {
   static const _keyAttendance = 'halqat_attendance_v1';
   static const _keyGrades = 'halqat_grades_v1';
   static const _keyCurrentUserId = 'halqat_current_user_id_v1';
+  static const _keyCloudSession = 'halqat_cloud_session_v1';
 
   static const _cloudflareApiBaseUrl = String.fromEnvironment(
     'CLOUDFLARE_API_BASE_URL',
   );
 
   final http.Client _httpClient = http.Client();
+  final FlutterSecureStorage _secureStorage = const FlutterSecureStorage();
   final Map<String, int> _dataRevisions = {};
   final Map<String, Future<void>> _writeQueues = {};
 
-  bool get isCloudEnabled => kIsWeb && _cloudflareApiBaseUrl.trim().isNotEmpty;
+  bool get isCloudEnabled => _cloudflareApiBaseUrl.trim().isNotEmpty;
 
   Uri _apiUri(String path) => Uri.parse(_cloudflareApiBaseUrl).resolve(path);
 
@@ -45,6 +48,13 @@ class StorageService {
   }) async {
     final request = http.Request(method, _apiUri(path));
     request.headers['Accept'] = 'application/json';
+    if (isCloudEnabled && !kIsWeb) {
+      final token = await _secureStorage.read(key: _keyCloudSession);
+      if (token != null) {
+        request.headers['Authorization'] = 'Bearer $token';
+      }
+      request.headers['X-App-Platform'] = 'native';
+    }
     if (body != null) {
       request.headers['Content-Type'] = 'application/json';
       request.body = jsonEncode(body);
@@ -175,6 +185,13 @@ class StorageService {
     if (decoded is! Map || decoded['user'] is! Map) {
       throw const StorageException('استجابة تسجيل الدخول من الخادم غير صالحة');
     }
+    if (!kIsWeb) {
+      final token = decoded['token'];
+      if (token is! String || token.isEmpty) {
+        throw const StorageException('لم يرسل الخادم رمز الجلسة الآمن للتطبيق');
+      }
+      await _secureStorage.write(key: _keyCloudSession, value: token);
+    }
     return UserModel.fromMap(
       Map<String, dynamic>.from(decoded['user'] as Map),
     );
@@ -190,13 +207,24 @@ class StorageService {
         Map<String, dynamic>.from(decoded['user'] as Map),
       );
     } on StorageException catch (error) {
-      if (error.statusCode == 401) return null;
+      if (error.statusCode == 401) {
+        if (!kIsWeb) {
+          await _secureStorage.delete(key: _keyCloudSession);
+        }
+        return null;
+      }
       rethrow;
     }
   }
 
   Future<void> logoutCloud() async {
-    await _apiRequest('POST', '/api/auth/logout');
+    try {
+      await _apiRequest('POST', '/api/auth/logout');
+    } finally {
+      if (!kIsWeb) {
+        await _secureStorage.delete(key: _keyCloudSession);
+      }
+    }
   }
 
   Future<List<CircleModel>?> loadCircles() =>

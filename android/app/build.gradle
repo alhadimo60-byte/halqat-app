@@ -27,6 +27,7 @@ plugins {
 }
 
 android {
+    namespace "com.example.halqat_app"
     compileSdkVersion flutter.compileSdkVersion
     ndkVersion flutter.ndkVersion
 

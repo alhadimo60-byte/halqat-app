@@ -4,7 +4,6 @@ on:
   push:
     branches:
       - main
-      - master
   workflow_dispatch:
 
 permissions:
@@ -60,3 +59,29 @@ jobs:
           accountId: f77541dac46d47974971d8547fea733d
           wranglerVersion: '4'
           command: deploy
+
+  build-android-apk:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Build cloud-connected Android APK
+        run: flutter build apk --release --dart-define=CLOUDFLARE_API_BASE_URL=https://halqat-app.husseinalhadi21.workers.dev
+
+      - name: Upload Android APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: halqat-app-android-apk
+          path: build/app/outputs/flutter-apk/app-release.apk
+          if-no-files-found: error
+          retention-days: 30
