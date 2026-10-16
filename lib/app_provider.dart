@@ -309,7 +309,41 @@ class AppProvider with ChangeNotifier {
     String phone = '',
   }) async {
     if (_storage.isCloudEnabled) {
-      return 'إنشاء الحسابات السحابية متاح للمدير فقط';
+      final trimmedUser = username.trim().toLowerCase();
+      final trimmedPassword = password.trim();
+      final trimmedName = displayName.trim();
+      final trimmedPhone = phone.trim();
+      if (!RegExp(r'^[a-z0-9._-]{3,32}$').hasMatch(trimmedUser)) {
+        return 'اسم المستخدم يجب أن يكون من 3 إلى 32 حرفًا إنجليزيًا صغيرًا أو رقمًا أو . _ -';
+      }
+      if (trimmedPassword.length < 12 || trimmedPassword.length > 128) {
+        return 'كلمة المرور يجب أن تكون من 12 إلى 128 خانة';
+      }
+      if (trimmedName.isEmpty || trimmedName.length > 100) {
+        return 'الاسم الكامل مطلوب ولا يجب أن يتجاوز 100 حرف';
+      }
+      if (trimmedPhone.length > 32) {
+        return 'رقم الهاتف لا يجب أن يتجاوز 32 حرفًا';
+      }
+      try {
+        _currentUser = await _storage.registerCloud(
+          username: trimmedUser,
+          password: trimmedPassword,
+          displayName: trimmedName,
+          phone: trimmedPhone,
+        );
+        await _loadCloudState();
+        _currentTab = 0;
+        _loginError = null;
+        notifyListeners();
+        return null;
+      } on StorageException catch (error) {
+        _currentUser = null;
+        return error.message;
+      } catch (error) {
+        _currentUser = null;
+        return 'تعذر إنشاء الحساب: $error';
+      }
     }
 
     final trimmedUser = username.trim().toLowerCase();

@@ -173,81 +173,78 @@ class _LoginScreenState extends State<LoginScreen> {
                   const DeveloperLogo(),
                   const SizedBox(height: 22),
 
-                  if (!provider.isCloudMode)
-                    Container(
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: Colors.grey[300]!),
-                      ),
-                      padding: const EdgeInsets.all(4),
-                      child: Row(
-                        children: [
-                          Expanded(
-                            child: InkWell(
-                              onTap: () {
-                                setState(() {
-                                  _isRegisterMode = false;
-                                  _formKey.currentState?.reset();
-                                });
-                              },
-                              borderRadius: BorderRadius.circular(8),
-                              child: Container(
-                                padding:
-                                    const EdgeInsets.symmetric(vertical: 10),
-                                decoration: BoxDecoration(
-                                  color: !_isRegisterMode
-                                      ? const Color(0xFF047857)
-                                      : Colors.transparent,
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                                child: Text(
-                                  'تسجيل الدخول',
-                                  textAlign: TextAlign.center,
-                                  style: TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    color: !_isRegisterMode
-                                        ? Colors.white
-                                        : Colors.grey[700],
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ),
-                          Expanded(
-                            child: InkWell(
-                              onTap: () {
-                                setState(() {
-                                  _isRegisterMode = true;
-                                  _formKey.currentState?.reset();
-                                });
-                              },
-                              borderRadius: BorderRadius.circular(8),
-                              child: Container(
-                                padding:
-                                    const EdgeInsets.symmetric(vertical: 10),
-                                decoration: BoxDecoration(
-                                  color: _isRegisterMode
-                                      ? const Color(0xFF047857)
-                                      : Colors.transparent,
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                                child: Text(
-                                  'إنشاء حساب جديد',
-                                  textAlign: TextAlign.center,
-                                  style: TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    color: _isRegisterMode
-                                        ? Colors.white
-                                        : Colors.grey[700],
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
+                  Container(
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: Colors.grey[300]!),
                     ),
+                    padding: const EdgeInsets.all(4),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: InkWell(
+                            onTap: () {
+                              setState(() {
+                                _isRegisterMode = false;
+                                _formKey.currentState?.reset();
+                              });
+                            },
+                            borderRadius: BorderRadius.circular(8),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(vertical: 10),
+                              decoration: BoxDecoration(
+                                color: !_isRegisterMode
+                                    ? const Color(0xFF047857)
+                                    : Colors.transparent,
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Text(
+                                'تسجيل الدخول',
+                                textAlign: TextAlign.center,
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  color: !_isRegisterMode
+                                      ? Colors.white
+                                      : Colors.grey[700],
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                        Expanded(
+                          child: InkWell(
+                            onTap: () {
+                              setState(() {
+                                _isRegisterMode = true;
+                                _formKey.currentState?.reset();
+                              });
+                            },
+                            borderRadius: BorderRadius.circular(8),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(vertical: 10),
+                              decoration: BoxDecoration(
+                                color: _isRegisterMode
+                                    ? const Color(0xFF047857)
+                                    : Colors.transparent,
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Text(
+                                'إنشاء حساب جديد',
+                                textAlign: TextAlign.center,
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  color: _isRegisterMode
+                                      ? Colors.white
+                                      : Colors.grey[700],
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
 
                   const SizedBox(height: 16),
 
@@ -323,7 +320,15 @@ class _LoginScreenState extends State<LoginScreen> {
                                 if (val == null || val.trim().isEmpty) {
                                   return 'يرجى إدخال اسم المستخدم';
                                 }
-                                if (_isRegisterMode && val.trim().length < 3) {
+                                if (_isRegisterMode &&
+                                    provider.isCloudMode &&
+                                    !RegExp(r'^[a-z0-9._-]{3,32}$')
+                                        .hasMatch(val.trim().toLowerCase())) {
+                                  return 'استخدم 3-32 حرفًا إنجليزيًا صغيرًا أو رقمًا أو . _ -';
+                                }
+                                if (_isRegisterMode &&
+                                    !provider.isCloudMode &&
+                                    val.trim().length < 3) {
                                   return 'اسم المستخدم يجب أن يكون 3 أحرف على الأقل';
                                 }
                                 return null;
@@ -385,8 +390,12 @@ class _LoginScreenState extends State<LoginScreen> {
                                 if (val == null || val.trim().isEmpty) {
                                   return 'يرجى إدخال كلمة المرور';
                                 }
-                                if (_isRegisterMode && val.trim().length < 4) {
-                                  return 'كلمة المرور يجب أن تكون 4 خانات على الأقل';
+                                if (_isRegisterMode &&
+                                    val.trim().length <
+                                        (provider.isCloudMode ? 12 : 4)) {
+                                  return provider.isCloudMode
+                                      ? 'كلمة المرور يجب أن تكون 12 خانة على الأقل'
+                                      : 'كلمة المرور يجب أن تكون 4 خانات على الأقل';
                                 }
                                 return null;
                               },
@@ -490,7 +499,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   if (provider.isCloudMode && !_isRegisterMode) ...[
                     const SizedBox(height: 12),
                     const Text(
-                      'الحسابات السحابية تُنشأ وتُدار بواسطة مدير النظام.',
+                      'يمكنك إنشاء حساب عادي جديد من تبويب إنشاء حساب جديد.',
                       textAlign: TextAlign.center,
                       style: TextStyle(color: Color(0xFF065F46)),
                     ),

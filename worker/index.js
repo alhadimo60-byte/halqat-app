@@ -317,6 +317,89 @@ async function handleApi(request, env) {
   }
   await seedAppData(db);
 
+  if (path === '/api/auth/register' && method === 'POST') {
+    const ipAddress = `register:${request.headers.get('CF-Connecting-IP') ?? 'unknown'}`;
+    if (!(await loginAllowed(db, ipAddress))) {
+      return failure('محاولات كثيرة لإنشاء الحسابات؛ انتظر دقيقة ثم حاول مجددًا', 429);
+    }
+    await recordLoginFailure(db, ipAddress);
+    await createInitialAdmin(db, env);
+
+    let body;
+    try {
+      body = await request.json();
+    } catch {
+      return failure('بيانات إنشاء الحساب غير صالحة', 400);
+    }
+    if (!body || typeof body !== 'object' || Array.isArray(body)) {
+      return failure('بيانات إنشاء الحساب غير صالحة', 400);
+    }
+
+    const username = String(body.username ?? '').trim().toLowerCase();
+    const password = String(body.password ?? '');
+    const displayName = String(body.displayName ?? '').trim();
+    const phone = String(body.phone ?? '').trim();
+    if (!/^[a-z0-9._-]{3,32}$/.test(username)) {
+      return failure('اسم المستخدم يجب أن يكون من 3 إلى 32 حرفًا إنجليزيًا صغيرًا أو رقمًا أو . _ -', 400);
+    }
+    if (password.length < 12 || password.length > 128) {
+      return failure('كلمة المرور يجب أن تكون من 12 إلى 128 خانة', 400);
+    }
+    if (!displayName || displayName.length > 100) {
+      return failure('الاسم الكامل مطلوب ولا يجب أن يتجاوز 100 حرف', 400);
+    }
+    if (phone.length > 32) {
+      return failure('رقم الهاتف لا يجب أن يتجاوز 32 حرفًا', 400);
+    }
+
+    const salt = randomBytes(16);
+    const id = crypto.randomUUID();
+    const today = new Date().toISOString().slice(0, 10);
+    try {
+      await db.prepare(
+        `INSERT INTO users
+          (id, username, password_salt, password_hash, display_name, role, phone, created_at, is_active)
+         VALUES (?, ?, ?, ?, ?, 'user', ?, ?, 1)`,
+      ).bind(
+        id,
+        username,
+        encodeBase64(salt),
+        await hashPassword(password, salt),
+        displayName,
+        phone,
+        today,
+      ).run();
+    } catch (error) {
+      if (error instanceof Error && error.message.includes('UNIQUE constraint failed')) {
+        return failure('اسم المستخدم مستخدم بالفعل؛ اختر اسمًا آخر', 409);
+      }
+      throw error;
+    }
+
+    const token = await createSession(db, id);
+    const responseBody = {
+      user: publicUser({
+        id,
+        username,
+        display_name: displayName,
+        role: 'user',
+        phone,
+        created_at: today,
+        is_active: 1,
+      }),
+    };
+    if (request.headers.get('X-App-Platform') === 'native') {
+      responseBody.token = token;
+    }
+    return jsonResponse(
+      responseBody,
+      201,
+      {
+        'Set-Cookie': `halqat_session=${encodeURIComponent(token)}; HttpOnly; Secure; SameSite=Strict; Path=/; Max-Age=${sessionLifetimeSeconds}`,
+      },
+    );
+  }
+
   if (path === '/api/auth/login' && method === 'POST') {
     const ipAddress = request.headers.get('CF-Connecting-IP') ?? 'unknown';
     if (!(await loginAllowed(db, ipAddress))) {

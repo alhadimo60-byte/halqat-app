@@ -200,13 +200,37 @@ class StorageService {
       '/api/auth/login',
       body: {'username': username, 'password': password},
     );
+    return _userFromAuthResponse(decoded, 'تسجيل الدخول');
+  }
+
+  Future<UserModel> registerCloud({
+    required String username,
+    required String password,
+    required String displayName,
+    required String phone,
+  }) async {
+    final decoded = await _apiRequest(
+      'POST',
+      '/api/auth/register',
+      body: {
+        'username': username,
+        'password': password,
+        'displayName': displayName,
+        'phone': phone,
+      },
+    );
+    return _userFromAuthResponse(decoded, 'إنشاء الحساب');
+  }
+
+  Future<UserModel> _userFromAuthResponse(
+      dynamic decoded, String action) async {
     if (decoded is! Map || decoded['user'] is! Map) {
-      throw const StorageException('استجابة تسجيل الدخول من الخادم غير صالحة');
+      throw StorageException('استجابة $action من الخادم غير صالحة');
     }
     if (!kIsWeb) {
       final token = decoded['token'];
       if (token is! String || token.isEmpty) {
-        throw const StorageException('لم يرسل الخادم رمز الجلسة الآمن للتطبيق');
+        throw StorageException('لم يرسل الخادم رمز الجلسة الآمن بعد $action');
       }
       await _secureStorage.write(key: _keyCloudSession, value: token);
     }
