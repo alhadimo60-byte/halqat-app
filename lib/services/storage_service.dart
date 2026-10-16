@@ -27,6 +27,14 @@ class StorageService {
   static const _keyGrades = 'halqat_grades_v1';
   static const _keyCurrentUserId = 'halqat_current_user_id_v1';
   static const _keyCloudSession = 'halqat_cloud_session_v1';
+  static const _cloudDataKeys = {
+    _keyCircles: 'circles',
+    _keyCurricula: 'curricula',
+    _keyPlans: 'plans',
+    _keyStudents: 'students',
+    _keyAttendance: 'attendance',
+    _keyGrades: 'grades',
+  };
 
   static const _cloudflareApiBaseUrl = String.fromEnvironment(
     'CLOUDFLARE_API_BASE_URL',
@@ -40,6 +48,14 @@ class StorageService {
   bool get isCloudEnabled => _cloudflareApiBaseUrl.trim().isNotEmpty;
 
   Uri _apiUri(String path) => Uri.parse(_cloudflareApiBaseUrl).resolve(path);
+
+  String _cloudDataKey(String storageKey) {
+    final cloudKey = _cloudDataKeys[storageKey];
+    if (cloudKey == null) {
+      throw StateError('No cloud data key configured for $storageKey');
+    }
+    return cloudKey;
+  }
 
   Future<dynamic> _apiRequest(
     String method,
@@ -90,7 +106,8 @@ class StorageService {
     T Function(Map<String, dynamic>) fromMap,
   ) async {
     if (isCloudEnabled) {
-      final decoded = await _apiRequest('GET', '/api/data/$key');
+      final cloudKey = _cloudDataKey(key);
+      final decoded = await _apiRequest('GET', '/api/data/$cloudKey');
       if (decoded is! Map || decoded['data'] is! List) {
         throw const StorageException('استجابة البيانات من الخادم غير صالحة');
       }
@@ -139,9 +156,10 @@ class StorageService {
     String key,
     List<Map<String, dynamic>> listMap,
   ) async {
+    final cloudKey = _cloudDataKey(key);
     final decoded = await _apiRequest(
       'PUT',
-      '/api/data/$key',
+      '/api/data/$cloudKey',
       body: {'data': listMap, 'revision': _dataRevisions[key]},
     );
     if (decoded is! Map || decoded['revision'] is! num) {
